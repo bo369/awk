@@ -797,29 +797,34 @@ passing_ file 中。
 #### 25. 输入重定向(getline)
 getline函数： getline函数用于从标准输入、管道或文件(非当前处理的文件)读取输入。getline函数用于读取下一输入行，并且设置内置变量NF、NR和FNR。如果读到一条记录，函数就返回1. 如果读到EOF(end of fiJe，文件末尾)则返回0。如果发生错误，比如打开文件失败，则getline函数返回-1。
 
-范例
+**范例**
 
+```
 $ awk 'BEGIN{"date" | getline d;print d}' filename
 Thu Jan 14 11:24:24 PST 2015
+```
 说明：先执行UNIX/Linux的date命令，将输出通过管道发给getline，再通过getline将传来的内容赋值给用户自定义的变量d，然后打印d。
-
-范例
-
+**范例**
+```
 $ awk 'BEGIN{"date" | getline d;split(d,mon);print mon[2]}' filename
 Jan
+```
 说明：先执行date命令，将输出通过管道发给getline，接着，getline从管道读取输入，然后保存在用户自定义变量d中。split函数从d中生成一个名为mon的数组.最后，程序打印出数组mon的第2个元素。
 
-范例
+**范例**
 
+```
 $ awk 'BEGIN{while("ls" | getline) print}'
 a.out
 db
 dbook
 file
+```
 说明：ls命令的输出将传递给getline: 每循环一次，getline就从ls的输出中读取一行，并将其显示到屏幕上，不需要输入文件， 因为awk会在文件打开之前先处理完BEGIN块。
 
 范例
 
+```
 $ awk 'BEGIN{printf "What is your name?";\
 getline name < "/dev/tty"}\
 $1 ~ name {print "Found " name " on line ", NR "."}\
@@ -827,40 +832,893 @@ END{print "See ya, " name "."}' filename
 What is your name? Ellie  < Waits for input from user >
 Found Ellie on line 5.
 See ya, Ellie.
-说明：1.在屏幕上显示What is your name ? 然后等待用户响应. get1ine函数将从终端(/dev/tty)接收输入，直到用户换行，然后，将输入保存在用户自定义的变量name中。
-2. 如果第一个字段匹配之前赋给name的值，则执行print函数。
-3. END语句打印出"See ya,"，然后显示Ellie(保存在变量name中的值)，再跟上一个句点。
+```
+
+说明：
+1.在屏幕上显示What is your name ? 然后等待用户响应. get1ine函数将从终端(/dev/tty)接收输入，直到用户换行，然后，将输入保存在用户自定义的变量name中。
+2.如果第一个字段匹配之前赋给name的值，则执行print函数。
+3.END语句打印出"See ya,"，然后显示Ellie(保存在变量name中的值)，再跟上一个句点。
+
+**范例**
+
+```
+$ awk 'BEGIN{while (getline < "/etc/passwd" >0) lc++;print lc}' file
+16
+```
+
+说明：awk将逐行读取文件/etc/passwd， lc随之递增直至到达EOF，然后打印lc的值，即文件passwd的行数。注意，如果文件不存在，get1ine的值将是-1。如果读到文件尾，返回值是0，而读到一行时，返回值则是1。因此，命令
+
+```
+while (getline < "/etc/junk")
+```
+遇到文件/etc/junk不存在的情况时，会进入死循环，因为返回值-1导致条件为真。
+
+#### 26. awk管道
+如果在awk命令中打开了管道，就必须先关闭它才能打开另一个管道。管道符右边的命令被括在双引号之间。每次只能打开一个管道。
 
 范例
 
-$ awk 'BEGIN{while (getline < "/etc/passwd" >0) lc++;print lc}' file
-16
-说明：awk将逐行读取文件/etc/passwd， lc随之递增直至到达EOF，然后打印lc的值，即文件passwd的行数。
-注意，如果文件不存在，get1ine的值将是-1。如果读到文件尾，返回值是0，而读到一行时，返回值则是1。因此，命令
+```
+$ cat names
+john smith
+alice cheba
+george goldberg
+susan goldberg
+tony tram
+barbara nguyen
+elizabeth lone
+dan savage
+eliza goldberg
+john goldenrod
 
-while (getline < "/etc/junk")
+$awk '{print $1,$2 | "sort -r +1 -2 +0 -1"}' names
+tony tram
+john smith
+dan savage
+barbara nguyen
+elizabeth lone
+john goldenrod
+susan goldberg
+george goldberg
+eliza goldberg
+alice cheba
+```
 
-26. awk管道
+说明：awk使用管道将print语句的输出结果发给Linux的sort命令作为输入。sort命令将以第2个字段为主键、第1个字段为次键对输入进行逆排序。这种情况下，Linux命令必须被双引号括起来。
 
-27. awk if语句
+**关闭文件和管道**
+如果打算再次在awk程序中使用某个文件或管道进行读写，则可能要先关闭程序，因为其中的管道会保持打开状态直至脚本运行结束。注意，管道一旦被打开，就会保持打开状态直至awk退出。因此，END块中的语句也会受管道的影响。下面这个例子中，END块的第一行命令将用来关闭管道。
 
-28. awk循环
+**范例：**
 
-29. awk控制语句
+```
+awk '{print $1,$2 | "sort -r +1 -2 +0 -1"} END {close("sort -r +1 -2 +0 -1")}' filename
+```
 
-30. awk数组介绍
+说明：
+1.awk把输入文件的每一行记录都通过管道发给Linux的实用程序sort。
+2.执行到END块时，管道被关闭。双引号中的字符串必须与最初打开管道的pipe命令字符串完全一致。
 
-31. awk字符串函数
+**system函数**
+awk的内置函数system以Linux系统命令作为参数，执行该命令并且将命令的退出状态返回给awk程序。它很像C语言的一个标准库函数，该函数恰巧也为system()。注意，作为参数的Linux命令必须加双引号。
+```
+格式 system("Linux Command")
+```
+**范例**
+```
+awk {system("cat "$1);system("clear")} filename
+```
+说明：
+1.system函数以Linux的cat命令和输入文件的第1个字段作为参数。cat命令把第1个字段的值，即一个文件名，作为参数。
+2.system函数以Linux的clear命令作为参数。shell将执行clear命令，清空屏幕。
+#### 27. awk if语句
+**if 语句**
+awk命令以if结构开头的话句属于操作语句。**条件模式**(conditional pattern) 中，if是隐含的。而**条件操作**语句的if则是直接声明的，后面跟了一个用圆括号括起来的表达式。如果该表达式的运算结果为真(非0或非空)，则执行表达式后的语句(或语句块)。如果跟在条件表达式后面的语句不止一条，就要用分号或换行符把它们隔开，还要用花括号把这一组语句都括起来，以作为一个块来被执行。
 
-32. 内置算术函数
+**格式**
 
-33. 用户自定义函数
+```
+if(表达式) {
+  语句;语句;...
+}
+```
 
-34. 固定字段
+**范例**
 
-35. 多行记录
+```
+$ awk '{if($6 > 50) print $1 "Too high"}' filename
+```
 
-36. awk内置函数复习
+说明：在if操作块中对表达式进行测试。如果第6个字段的值大于50，就执行打印语句。由于跟在表达式后面的是单条语句，所以不需要加花括号(filename代表输入文件)。
+
+**范例**
+
+```
+$ awk '{if($6 > 20 && $6 <=50) {safe++;print "OK"}}' filename
+```
+
+说明：在if操作块中测试表达式。如果第6个字段的值大于20并且小于50，就要将表达式后面的那些语句作为一个块来执行，因此，必须用花括号把它们括起来。
+
+**if/else 语句**
+if/else语句实现双路判断。如果关键字if后面的表达式为真，就执行与该表达式关联的语句块。如果这个表达式的运算结果为假或0，则执行关键字else后面的语句块。如果if或else包含多条语旬，就必须用花括号把它们合成一个语句块。
+
+**格式**
+```
+if(表达式) {
+  语句;语句;...
+} else {
+  语句;语句;...
+}
+```
+**范例**
+```
+$ awk '{if($6 > 50) {print $1 " Too high";} else {print "Range is OK";}}' filename
+```
+说明：如果第一个表达式为真，即第6个字段($6)的值大于50 ，则print函数打印第1个字段和字符串"Too high"。否则就执行else后的语句，打印字符串"Range is OK"。
+
+**范例**
+```
+$ awk '{if($6 > 50) {count++;print $3;} else {x+5;print $2;}}' filename
+```
+说明：如果第一个表达式为真，即第6个字段($6)的值大于50，则执行表达式后面的这个语句块。否则就执行else后面的那个语句块。注意，语句块必须括在花括号中。
+
+**if/else和else if语句**
+
+if/else和else if语句提供了多路判断功能。如果跟在关键字if后的表达式为真，则执行与该表达式关联的语句块，同时，程序的控制流将跳到与最后一个else关联的最后一个右花括号后，从这个位置继续往下行。否则，控制转到else if测试与其关联的表达式。如果第一个else if的条件为真，则执行对应表达式后的语句。如果else if 的条件表达式都不为真，控制就转到else语句。这个else被称作默认操作，因为只要其他语句都不为真，就执行该else块。
+
+**格式**
+
+```
+if(表达式) {
+  语句;语句;...
+} else if(表达式) {
+  语句;语句;...
+} else if(表达式) {
+  语句;语句;...
+} else {
+  语句;语句;...
+}
+```
+
+**范例**
+
+```
+$ awk {
+  if($3 > 89 && $3 <101) Agrade++
+  else if($3 > 79) Bgrade++
+  else if($3 > 69) Cgrade++
+  else if($3 > 59) Dgrade++
+  else Fgrade++
+}END{
+  print "The number of failures is "Fgrade
+} filename
+```
+
+说明
+1. if语句是一个操作，因此必须用花括号括起来。表达式的计算是从左向右进行。如果第一个表达式为假，则整个表达式为假。如果第一个表达式为真，则计算符号逻辑与(&&)后面的那个表达式。如果整个表达式为真，则变量Agrade加1。
+2. 如果关键字if后面的表达式值为假，就测试这个else if的表达式。如果该表达式的值为真，就执行它后面的语句。也就是说，如果第3个字段($3)的值大于79，则变量Bgrade加1。
+3. 如果头两个条件语句都为假，就测试这个else if 表达式，如果第3个字段($3)的值大于69，则将变量Cgrade加1。
+4. 如果头三个条件语句都为假，就测试这个else if表达式，如果第3个字段($3)的值大于59，则将变量Dgrade 加1。
+5. 如果上面的表达式都不为真，就执行else块，将变量Fgrade加1。接下来的花括号将结束整个操作块。
+#### 28. awk循环
+循环的功能是：当测试表达式的条件为真时，重复执行表达式后面的语句。循环常常被用来对记录中的每个字段重复执行某种操作，或者在END块中用来循环处理某个数组中的所有元素。awk有3种类型的循环：while 循环、for循环和特殊for循环，特殊for循环将在稍后介绍awk数组时讨论。
+
+**while循环**
+使用while循环的第一步是给一个变量设初值，然后在while表达式中测试该变量。如果求得表达式的值为真（非0），则进入循环体执行其中的语句。如果循环体内有多条语句，就必须用花括号把这些语句括起来。循环块结束之前，一定要更新用来控制循环表达式的变量，否则循环将无休止地进行下去。下面这个例子中，每处理一条新记录，循环控制变量就会被重置一次。
+
+```
+awk 'BEGIN{while(anum <= 20){anum++;print anum}}'
+```
+
+do/while循环与while 循环很相似，唯一的区别在于do/while要先执行循环体至少一次，然后才测试表达式。
+
+**范例**
+```
+$ awk '{i=1; while(i<=NF){print NF,$i; i++ }}'filename
+```
+
+说明
+变量i被初始化为1 ;当i小于或等于记录的字段数(NF)时，先执行print语句，然后将i加1。接下来又重新测试表达式，直至i大于NF的值。变量i要在awk开始处理下一条记录时被重置。
+
+**for循环**
+for循环和while循环基本相同，只不过for循环的圆括号中需要3个表达式，前两个分别是**初始化表达式**和**测试表达式**，第3个则用于**更新测试表达式**所用的变量。在awk的for循环中，圆括号里的第一条语句只能初始化一个变量(C语言中与之对应的语句则可以用逗号分隔的形式初始化多个变量)。
+
+**范例**
+
+```
+$ awk '{for(i=1;i<=NF;i++) print NF,$i}' filename
+```
+
+说明：变量i被初始化为1，然后测试它是否小于或等于记录的字段数目(NF)。若是，print函数便打印出NF 和\$i的值($i代表第i个字段)，然后将i加1 (for循环经常会在END操作中与数组一同使用，循环处理数组的所有元素)。
+#### 29. awk控制语句
+break和continue语句可以在某个特定条件为真时，使用break语句跳出循环。continue 语句的作用则是在特定条件为真时，让循环跳过continue之后语句，将控制转回循环顶部，开始下一轮循环。
+
+**范例**
+```
+$ awk '{
+  for(x = 3; x <= NF; x++){
+    if($x < 0){ print "Bottomed out!"; break}
+    /*break out of for loop*/
+  }
+}' filename
+```
+说明：如果字段$x的值小于0，则break语句将控制跳转到循环体的右花括号后面的那条语句，即跳出循环。
+
+```
+$ awk '{
+  for(x = 3; x <= NF; x++){
+    if($x < 0){ print "Bottomed out!"; continue}
+    /*starts next iteration of the for loop*/
+  }
+}' filename
+```
+
+说明：如果字段$x的值等于0，则continue语句使控制转回循环顶部并开始执行，将从for循环的第3个表达式x++开始。
+
+**next语句**
+next语句从输入文件中取出下一行输入，然后从awk脚本的顶部重新开始执行。
+
+**范例**
+
+```
+awk '{
+  if($1 ~ /Peter/){next}
+  else {print}
+}' filename
+```
+
+说明：如果某一行的第一个字段包含Peter，awk就**跳过该行**，从输入文件中读取下一行，然后从头开始执行脚本。
+
+**exit语句**
+exit语句用于终止awk程序。它只能中断对记录的处理，不能跳过END语句。如果exit语句的参数是一个0-255之间的值(exit 1)，这个值就会被打印在命令行上，以表明程序是否执行成功，井且指出失败的类型。
+
+**范例**
+
+```
+$ awk '{exit 1}' filename
+$ echo $?
+1
+```
+
+说明：退出状态为0表示成功，退出状态非0则表示失败(这是Linux的统一约定)。退出状态由程序员决定是否在程序中提供。在这个例子中，命令返回的退出状态值为1。
+#### 30. awk数组介绍
+数组在awk命令中被称为关联数组(associative arrays) ，因为它的下标既可以是数字也可以是字符串。下标通常又被称作键(key)，并且与对应的数组元素的值相关联。数组元素的键和值都存储在awk程序内部的一个表中，该表采用的是散列算法。正是由于使用了散列算法，所以数组元素不是顺序存储的，如果将数组的内容显示出来，元素的排列顺序也许跟想象中的不一样。
+
+和变量一样，数组也是被用到时才被创建，而且，awk还能判定这个数组用于保存数字还是字符串。根据使用时的上下文环境，数组元素被初始化为数字。或空字符串。数组的大小不需要声明。awk数组可用于从记录中收集信息，也可用于统计总数、计算词数、记录模式出现次数等应用。
+
+由于awk数组的内容比较多，我们依次从以下几个方面介绍给大家。
+##### 30.1 关联数组的下标
+使用变量作为数组索引请参见范例
+
+**范例**
+
+```
+$ cat employees
+Tom   Jones 4424 5/12/66 543354
+Mary  Adams 5346 11/4/63 28765
+Sally Chang 1654 7/22/54 650000
+Billy Black 1683 9/23/44 336500
+
+$ awk '{name[x++]=$2}END{for(i=0; i<NR; i++){print i,name[i]}}' employees
+0 Jones 
+1 Adams 
+2 Chang 
+3 Black
+```
+说明：数组name的下标是用户自定义的变量x。运算符++表明这是一个数值型的变量。awk将x初始化为0，并且每次使用x后将其加1(所用的是后递增运算符)。每条记录的第2个字段都将赋值给数组name中的相应元素。END块使用for循环来循环处理数组，将从下标0开始，依次打印数组元素的值。下标只是一个键，所以不必从0开始。下标可以从任意值开始，数字或字符串都可以。
+**范例**
+```
+$ awk'{id[NR]=$3}END{for(x=1; x<=NR; x++){print id[x]}}' employees
+4424
+5346
+1654
+1683
+```
+说明：awk变量NR保存当前记录的记录号。本例用NR作为下标，把每条记录的第3个字段赋值给数组中的相应元素。最后，for循环对数组进行循环处理，打印出保存在数组中的值。
+##### 30.2 特殊for循环
+当下标为字符串或非连续的数字时，不能用for循环来遍历数组。这时候就要使用特殊for循环。特殊for循环把下标作为键来查找与之关联的值。
+**格式**
+```
+$ awk '{
+  for(item in arrayname){
+    print arrayname[item]
+  }
+}'
+```
+范例
+
+```
+$ cat db
+1 Tom Jones
+2 Mary Adams
+3 Sally Chang
+4 Billy B1ack
+5 Tom Savaqe
+6 Tom Chung
+7 Reqqie Steel
+8 Tommy Tucker
+$ awk '/^Tom/{name[NR]=$1}END{for(i=1;i<=NR;i++)print name[i]}' db
+Tom
+
+
+
+Tom
+Tom
+
+Tommy
+```
+
+说明：如果在输入行的行首匹配到正则表达式Tom，就为数组name赋一个值。NR值(当前记录号)，将作为name数组的索引。在每一行上匹配到Tom时，name数组就赋一个第一个字段($1)的值，当到达END块时，name数组仅包含name[l]，name[5]，name[6]，name[8]这4个元素。因此，当使用for循环打印name数组的值时，索引2、3 、4、7为空。
+
+**范例**
+```
+$ awk '/^Tom/{name[NR]=$1}END{for(i in name){print name[i]}}' db
+Tom
+Tommy
+Tom
+Tom
+```
+说明：用特殊for循环遍历数组，只打印有相应下标的元素的值。打印结果的次序是随机的，因为关联数组是以散列方式存储的。
+##### 30.3 用字符串作为数组下标
+数组下标可以由包含单个字符或字符串的变量组成，如果是字符串，则必须用双引号引起来。
+**范例**
+```
+$ cat datafile3
+tom
+mary
+sean
+tom
+mary
+mary
+bob
+mary
+alex
+```
+```
+$ cat awk.sc
+/tom/{count["tom"]++}
+/mary/{count["mary"]++}
+END{print "There are " count["tom"] " Toms in the file and
+"count["mary"]" Marys in the file."}
+
+$ awk -f awk.sc datafile3
+There are 2 Toms in the file and 4 Marys in the file.
+```
+说明：
+1.数组count包含两个元素: count["tom"]和count["mary"]。这两个数组元素的初值都是0。每次匹配到tom时，数组元素count["tom"]的值都加1 。
+2.同样的过程被应用于count["mary"]。注意，每行只会算一次，即使tom(或mary)在该行中出现多次。
+3.END模式打印出每个数组元素的值。
+##### 30.4 使用字段的值作为数组下标
+对于awk命令，任何表达式都可以用作数组的下标。所以，也可以用字段作下标。下面的例子中的程序用于计算所有名字在第2 个字段出现的次数，并引入了一种for循环的新形式。
+
+```
+for(index_value in array) statement
+```
+
+在前面介绍的例子中，END块中出现的for循环的工作过程如下：变量name被设为count数组的索引值，在每次for循环的迭代中，执行print操作，首先打印的是索引值，然后是保存在元素中的值(打印输出的次序无法确定)。
+
+**范例**
+
+```
+$ cat datafile4
+4234 Tom 43
+4567 Arch 45
+2008 Eliza 65
+4571 Tom 22
+3298 Eliza 21
+4622 Tom 53
+2345 Mary 24
+$ awk '{count[$2]++}END{for(name in count)print name,count[name]}'
+Tom 3
+Arch 1
+Eliza 2
+Mary 1
+```
+
+说明：这条awk语句首先用记录的第2个字段作为数组count的下标。数组的下标随第2个字段的变化而变化，所以数组count 的第一个下标是Tom。而count["Tom"]中保存的值是1。然后，count["Arch"]、count["Eliza"]和count["Mary"]相继被设为10当在第2个字段中再次出现Tom时，count["Tom"]的值将被加1，于是它目前的值是2。Arch、Eliza和Mary再次出现时其过程类似。
+
+**范例**
+
+```
+$ awk '{dup[$2]++; if(dup[$2] > 1){name[$2]++}}\
+END{print "The duplicates were"\
+for(i in name){print i,name[i]}}' datafile4
+Tom 2
+Eliza 2
+```
+
+说明：数组dup的下标是第2个字段的值，即人名。dup数组中元素的值最初都是0，每处理一条记录，相应元素的值就加1。如果名字重复出现，则对应该下标的元素值就会变成2，并相应地逐渐增加。如果dup数组中某个元素的值大于1，就会创建一个名为name的新数组，也是以第2个字段的值作为下标，用于记录出现次数大于1的人名。
+
+##### 30.5 split与delete函数
+数组与split函数: awk的内置函数split能够将字符串拆分为词，然后保存在数组中。您可以指定字段分隔符，也可以就用FS的当前值。
+**格式**
+```
+split(字符串,数组,字段分隔符)
+split(字符串,数组)
+```
+**范例**
+
+```
+$ awk 'BEGIN{split("3/15/2015",date,"/");\
+print "The month is " date[1] " and the year is "date[3] "}' filename
+The month is 3 and the year is 2015.
+```
+
+说明：将字符串3/15/2015保存到数组date中，用正斜杠作为字段分隔符。现在date[1]中是3，date[2]中是15，而date[3] 中则是2015。字段分隔符用第3个参数指定，如未指定，就以FS的值做字段分隔符。
+
+delete函数：delete函数用于删除数组元素。
+**范例**
+```
+$ awk '{line[x++]=$2}END{for(x in line) delete(line[x])}' filename
+```
+说明：赋给数组line的值是第2个字段的值。所存记录都处理完后，特殊for循环将遍历数组的所有元素，并由delete函数来删除它们。
+##### 30.6 多维数组
+awk命令虽然没有宣称支持多维数组，却提供了定义多维数组的方法。awk定义多维数组的方法是把多个下标串成字符串，下标之间用内置变量SUBSEP的值分隔。变量SUBSEP的值是"\034"，这是个不可打印的字符，极少被使用，因此不太可能被用作下标中的字符。表达式matrix[2,8]其实就是数组matrix[2 SUBSEP 8] ，转换后所得的结果为matrix["2\0348"] 。因此，下标成了关联数组中的唯一标识符。
+**范例**
+
+```
+$ cat datafile
+1 2 3 4 5
+2 3 4 5 6
+7 8 9 0 1
+
+$ awk '{
+  nf=NF
+  for(x=1;x<NF;x++){
+    matrix[NR,x]=$x
+  }
+}END{
+  for(x=1;x<NR;x++){
+    for(y=1;y<nf;y++){
+      printf "%d",matrix[x,y]
+    }
+    printf "\n"
+  }
+}' datafile
+(输出)
+1 2 3 4 5
+2 3 4 5 6
+7 8 9 0 1
+```
+说明：
+1.将NF的值(字段数)赋给变量nf(该程序假定每条记录都是由5个字段组成)。
+2.进入for循环，依次把输入行每个字段的字段号保存到变量x中。
+3.matrix是一个二维数组。每个字段的值将赋给下标为NR(当前记录的记录号)和x的数组元素。
+4.END块中的两个for循环被用来遍历matrix数组，并打印数组中保存的值。这个例子只是用来说明如何使用多维数组。
+##### 30.7 处理命令行参数
+30.7 处理命令行参数
+ARGV awk可以从内置数组ARGV中得到命令行参数，其中包括命令awk。但所有传递给awk的选项都不在其中。ARGV数组的下标从0开始。
+ARGC ARGC是一个包含命令行参数个数的内置变量。
+
+范例
+```
+$ cat argvs
+# Scriptname:argvs
+BEGIN{
+  for(i=0; i<ARGC; i++){
+    printf("argv[%d] is %s\n",i,ARGV[i])
+  }
+  printf("The number of arguments, ARGC=%d\n",ARGC)
+}
+
+$ awk -f argvs datafile
+argv[0] is awk
+argv[1] is datafile
+The number of arguments, ARGC=2
+```
+说明
+for循环先将i设为0，然后测试它是否小于命令行参数的个数(ARGC) ，再用printf函数依次显示出每个参数。所有参数处理完之后，最后那条printf 语句用来输出参数的个数ARGC。这个例子说明awk并不把命令行选项视为参数。
+
+范例
+```
+$ awk -f argvs datafile "Peter Pan" 12
+argv[0] is awk
+argv[1] is datafile
+argv[2] is Peter Plan
+argv[3] is 12
+The number of arguments,ARGV=4
+```
+说明：和上个例子一样，打印出所有参数。nawk命令被当成第一个参数，而-f选项和脚本文件名(即argvs)则被排除在外。
+
+**范例**
+```
+$ cat datafile5
+Tom Jones:123:03/14/56
+Peter Pan:456:06/22/58
+Joe Blow:145:12/12/78
+Santa Ana:234:02/03/66
+Ariel Jones:987:11/12/66
+
+$ cat arging.sc
+# Scriptname:arging.sc
+BEGIN{FS=":";name=ARGV[2]
+  print "ARGV[2] is "ARGV[2]
+}
+$1 ~ name {print $0}
+
+$ awk -f arging.sc datafile5 "Peter Pan"
+ARGV[2] is Peter Pan
+Peter Pan:456:06/22/58
+nawk: can't open Peter Pan
+input record number 5, file Peter Pan
+source 1ine number 2
+```
+说明：
+1.在BEGIN块中，ARGV[2]的值，即Peter Pan，被赋给变量name。
+2.Peter Pan被打印出来了，但是，处理完datafile并将其关闭后，awk试图把Peter Pan作为输入文件打开。awk把参数都作为输入文件。
+
+**范例**
+```
+$ cat arging2.sc
+BEGIN{FS=";";name=ARGV[2]
+  print "ARGV[2] is "ARGV[2]
+  delete ARGV[2]
+}
+$1 ~ name {print $0}
+
+$ awk -f arging2.sc datafile "Peter Pan"
+ARGV[2] is Peter Pan
+Peter Pan:456:06/22/58
+```
+
+说明：awk把ARGV数组的元素作为输入文件。且awk用完一个参数就将它左移，接着处理下一个，直到ARGV数组变空。如果某个参数使用后立刻被删除，那么这个参数就不会被当作下一个输入文件来处理。
+
+#### 31. awk字符串函数
+sub和gsub函数 sub函数用于在记录中查找能够匹配正则表达式的最长且最靠左的子串，然后用替换串取代找到的子串。如果指定了目标串，就在目标串中查找能够匹配正则表达式的最长且最靠左的子串，并将找到的子串替换为替换串。若未指定目标串，则在整个记录中查找。
+
+**sub函数格式**
+```
+sub(正则表达式,替换串);
+sub(正则表达式,替换串,目标串);
+```
+**范例**
+```
+$ awk '{sub(/Mac/,"MacIntosh");print}' filename;
+$ awk '{sub(/Mac/,"MacIntosh",$1);print}' filename
+```
+说明：
+1.在记录(\$0)中第一次匹配到正则表达式Mac时， Mac被替换为字符串MacIntosh。sub函数只对每行中出现的第一个匹配字符串进行替换(请参见用于替换多次匹配的gsub函数)。
+2.在记录的第1个字段(\$1)中第一次匹配到正则表达式Mac时，Mac被替换为字符串MacIntosh。**sub函数只对目标串中出现的第一个匹配字符串进行替换。**gsub函数则对字符串中的正则表达式进行全局替换，即替换所有在记录($0)中出现的正则表达式。
+
+**gsub函数格式**
+```
+gsub(正则表达式,替换串);
+gsub(正则表达式,替换串,目标串);
+```
+**范例**
+```
+$ awk '{gsub(/CA/,"California");print}' filename
+$ awk '{gsub(/[Tt]om/,"Thomas",$1);print}' filename
+```
+说明：
+1.记录($0)中找到的每个正则表达式CA都被替换为California。
+2.在第一个字段中找到的每个正则表达式Tom或tom都被替换为Thomas。
+
+**index函数**
+index函数返回子串在字符串中第一次出现的位置。偏移量从位置1开始计算。
+
+**格式**
+```
+index(字符串,子串)
+```
+**范例**
+```
+$ awk '{print index("hollow","low")}' filename
+4
+```
+说明：返回的数字是子串low在字符串hollow中第一次出现的位置，偏移量从1开始计算。
+
+**length函数** 
+length函数返回字符串中字符的个数。如果未指定参数，则length函数返回记录中的字符个数。
+
+**格式**
+```
+length(字符串)
+length
+```
+**范例**
+```
+$ awk '{print length("hello")}' filename
+5
+```
+length函数返回字符串hello的字符个数。
+
+**substr函数** 
+substr函数返回从字符串指定位置开始的一个子串。如果指定了子串的长度，则返回字符串的相应部分。如果指定的长度超出了字符串的实际范围，则返回其实际内容。
+
+**格式**
+```
+substr(字符串,起始位置)
+substr(字符串,起始位置,子串长度)
+```
+**范例**
+```
+$ awk '{print substr("Santa Claus",7,6)}' filename
+Claus
+```
+说明：在字符串"Santa Claus" 中，打印从位置7开始、长度为6个字符的子串。
+
+**match函数**
+match函数返回正则表达式在字符串中出现的位置，如果未出现，则返回0。match函数把内置变量RSTART设为子串在字符串中的起始位置， RLENGTH则设为子串的长度.这些变量可以被substr函数用来提取相应模式的子串。
+
+**格式**
+```
+match(字符串,正则表达式)
+```
+**范例**
+```
+$ awk 'END{start=match("Good ole USA",/[A-Z]+$/);print start}' filename
+10
+```
+说明：正则表达式/[A-Z]+$/的意思是查找在字符串尾部连续出现的大写字母.找到的子串USA是从字符串"Good ole USA"的第10个字符开始的。如果字符串未能匹配到正则表达式，则返回0。
+
+**范例**
+```
+$ awk 'END{start=match("Good ole USA",/[A-Z]+$/);\
+print RSTART,RLENGTH}' filename
+10 3
+
+$ awk 'BEGIN{line="Good ole USA"};\
+END{match(line,/[A-Z]+$/);\
+print substr(line,RSTART,RLENGTH)}' filename
+USA
+```
+说明：
+1.变量RSTART被match函数设置为匹配到的正则表达式在字符串中的起始位置。变量RLENGTH则被设为子串的长度。
+2.substr函数在变量line中查找子串，把RSTART和RLENGTH的值(由match函数设置)作为子串的起始位置和长度。
+
+**split函数** 
+split函数使用由第3个参数指定的字段分隔符，把字符取拆分成一个数组。如果没有提供第3个参数，awk将把FS 的当前值作为字段分隔符。
+
+**格式**
+```
+split(字符串,数组,字段分隔符)
+split(字符串,数组)
+```
+**范例**
+```
+$ awk 'BEGIN{split("12/25/2001",date,"/");print date[2]}' filename
+$ 25
+```
+说明：split函数把字符串12/25/2001拆分为数组date。以正斜杠作为字段分隔符。数组date的下标从1开始。awk将打印数组date的第2个元素。
+
+**sprinf函数** 
+sprintf函数返回一个指定格式的表达式。可以在sprintf函数中使用printf函数的格式规范。
+
+**格式**
+```
+variable = sprintf("含有格式说明的字符串",表达式1 ,表达式2,...,表达式n)
+```
+**范例**
+```
+$ awk '{line=sprintf("%-15s %6.2f ",$1,$3);print line}' filename
+```
+说明：按照printf的规范设置第1个和第3个字段的格式(一个左对齐、长度为15的字符串和一个右对齐、长度为6个字符的浮点数)。结果被赋给用户自定义的变量line。请参见printf函数。
+#### 32. 内置算术函数
+下表列出了awk的内置算术函数，表中的x和y是任意表达式。
+**算术函数**
+|函数名	|返回值
+| :-------- | --------:| :------: |
+|atan2(x,y)	|值域内y/x的反正切
+|cos(x)	|x的余弦，x为弧度
+|exp(x)	|x的e指数函数
+|int(x)	|x的整数部分，当x>0时，向下取整
+|log(x)	|x的自然对数（底数为e）
+|rand()	|随机数r（0
+|sin(x)	|x的正弦，x为弧度
+|sqrt(x)	|x的平方根
+|srand(x)	|x是rand()的新种子
+
+#### 33. 用户自定义函数
+脚本中凡是可以出现模式操作规则的位置都可以放置用户自定义的函数。
+
+**格式**
+```
+函数名(参数,参数,参数, ...){
+    语句
+    return 表达式
+    (注: return语句和表达式都是可选项)
+}
+```
+变量以参数值的方式传递，且仅在使用它的函数中局部有效。函数使用的只是变量的副本。数组则通过地址或引用被传递，因此，可以在函数中直接修改数组的元素。函数中的任何变量，只要不是从参数列表中传来的，就都被视为全局变量，也就是说，该变量对整个awk程序都是可见的，而且，如果它在函数中发生了改变，即在整个程序中发生了改变。在函数中提供局部变量的唯一途径就是将它加入参数列表中。这类参数通常放在参数列表的末端。当调用函数时，如果没有指定某个形参的值，该参数就会被初始化为空。return语句会把控制权交还给调用者，可能还会返回一个值。
+
+**范例**
+```
+$ cat grades
+44 55 66 22 77 99
+100 22 77 99 33 66
+55 66 100 99 88 45
+
+$ cat sorter.sc
+# Scriptname: sorter
+# It sorts numbers in ascending order
+function sort (scores , num_elements , tmp , i , j) {
+    # temp, i , and j will be local and private,
+    # with an initial value of null.
+    for( i = 2; i <= num_elements ; ++i ) {
+        for ( j = i; scores [j-1] > scores[j]; --j ) {
+            temp = scores[j]
+            scores[j] = scores[j-1]
+            scores[j-1] = temp
+        }
+    }
+}
+{for ( i = 1; i <= NF; i++){
+    grades[i]=$i
+}
+sort(grades, NF) #Two arguments are psssed
+for ( j = 1; j <= NF; ++j )
+    printf("%d", grades[j])
+    printf ("\n")
+}
+
+$ awk -f sorter.sc grades
+22 44 55 66 77 99
+22 33 66 77 99 100
+45 55 66 88 99 100
+```
+
+说明
+1.定义名为sort的函数，函数定义可以出现在脚本的任意位置，除了那些作为参数传递的变量外，所有其他变量的域都是全局的。即如果在函数中发生了变化，也就在整个awk脚本中发生了变化。数组是通过引用进行传递的。圆括号中共有5个形参，其中数组scores将通过引用被传递，所以，如果在函数中修改了这个数组中任何一个元素，原来的数组也会被修改.变量num_elements是一个局部变量，是原变量的一个副本。变量temp、i和j则是函数的局部变量。
+2.外层的for循环将遍历一个整数数组，前提是该数组中至少有两个整数可用于比较。
+3.内层的for循环用当前这个整数与数组中前一个整数(scores[j-1])进行比较。如果前一个整数大于当前这个整数，就把当前这个数组元素的值赋给变量temp。然后把前一个元素的值赋给当前元素。
+4.外层循环至此结束.
+5.函数定义的末尾.
+6.脚本的第一个操作块由此开始。for循环遍历当前记录的所有字段，生成一个整数数组。
+7.调用sort函数，把由当前记录生成的整数数组和当前记录的字段数作为参数传给它。
+8.sort函数结束后，程序控制由此开始。这个for循环用于打印完成排序的数组中的元素。
+#### 34. 固定字段
+下面这个例子中，字段都是固定宽度的，但没有使用字段分隔符。substr函数可以用来创建字段。
+
+**范例**
+
+```
+$ cat fixed
+031291ax5633(408)987-0124
+021589bg2435(415)866-1345
+122490de1237(916)933-1234
+010187ax3458(408)264-2546
+092491bd9923(415)134-8900
+112990bg4567(803)234-1456
+070489qr3455(415)899-1426
+
+$ awk '{printf substr($0,1,6)" ";printf substr($0,7,6)" ";\
+print substr($0,13,length)}' fixed
+031291 ax5633 (408)987-0124
+021589 bg2435 (415)866-1345
+122490 de1237 (916)933-1234
+010187 ax3458 (408)264-2546
+092491 bd9923 (415)134-8900
+112990 bg4567 (803)234-1456
+070489 qr3455 (415)899-1426
+```
+
+说明
+第1个字段通过从整个记录中提取子串得到，子串从记录第一个字符开始、长度为6个字符。接下来，打印一个空格。第2个字段是通过在记录中提取从位置7开始、长度为6个字符的子串得到，后跟一个空格。最后一个字段则是通过在整个记录中提取从位置13开始、到由行的长度所确定的位置之间的子串获得（如果未指定参数，length函数返回当前行($0)的长度）。
+
+空字段 如果用固定长度的字段来存储数据，就可能出现一些空字段。下面这个例子中，substr函数被用来保存字段，而不考虑它们是否包含数据。
+
+**范例**
+```
+$ cat db
+xxx  xxx
+xxx  abc  xxx
+xxx  a    bbb
+xxx       xx
+
+$ cat awkfix
+# Preserving empty fields. Field width is fixed.
+{
+    f[1]=substr($O, 1, 3)
+    f[2]=substr($O, 5, 3)
+    f[3]=substr($O, 9, 3)
+    line=sprintf ("%-4s%-4s%-4s\n",f[1],f[2],f[3])
+    print line
+}
+
+$ awk -f awkfix db
+xxx  xxx
+xxx  abc  xxx
+xxx  a    bbb
+xxx       xx
+```
+
+说明：
+1. 打印文件db的内容。这个文件中有一些空字段。
+2. 数组f的第1个元素被赋值为由位置1开始、长度为3的记录的子串。
+3. 数组f的第2个元素被赋值为由位置5开始、长度为3的记录的子串。
+4. 数组f的第3个元素被赋值为由位置9开始、长度为3的记录的子串。
+5. 用sprintf函数设置好数组元素的格式，然后将它们赋值给用户自定义的变量line。
+6. 打印line的值，可以看到结果中空字段依然被保留。
+
+带$、逗号或其他字符的数字 下面这个例子中，价格字段中包含一个美元符号和逗号。脚本必须删掉这些字符，才能把价格加起来得出总的开销。可以通过gsub函数来完成这一任务。
+
+**范例**
+
+```
+$ cat vendor
+access tech:gp237221:220:vax789:20/20:11/01/90:$1,043.00
+alisa systems:bp262292:280:macintosh:new updates:06/30/91:$456.00
+alisa systems:gp262345:260:vax8700:alisa talk:02/03/91:$1,598.50
+apple computer:zx342567:240:rnacs:e-mail:06/25190:$575.75
+caci:gp262313:280:sparc station:networkll.5:05/12/91:$1,250.75
+datalogics:bp13.2455:260:microvax2:pagestation maint:07/01/90:$1,200.00
+dec:zx354612:220:microvax2:vms srns:07/20/90:$1,350.00
+
+$ awk -F: '{gsub(/\$/,"");gsub(/,/,"");cost +=$7};\
+END{print "The tota1 is $" cost}' vendor
+$7474
+```
+说明：第一个gsub函数用空字符串对美元符号(\''\$)进行全局替换；第二个gsub函数则用空串替换全部逗号。然后，将用户自定义变量cost与每行的第7个字段相加，再把每次的结果赋回给cost，由此统计出总数。END块打印出字符串"The total is $"，后面跟着cost的值。
+#### 35. 多行记录
+到目前为止，本教程用作例子的所有数据文件中，每条记录都自成一行。而在下面这个名为checkbook的示例数据文件中，记录之间用空行分隔，同一记录的字段之间则用换行符分隔。要处理这个文件，就必须将记录分隔符（RS）设为空值，而把字段分隔符（FS）设为换行符。
+
+```
+$ cat checkbook
+1/1/04
+#125
+-695.00
+Mortgage
+
+1/1/04
+#126
+-56.89
+PG&E
+1/2/04
+#127
+-89.99
+Safeway
+
+1/3/04
++750.00
+Paycheck
+
+1/4/04
+#128
+-60.00
+Visa
+
+$ cat awkchecker
+BEGIN{RS=""; FS="\n"; ORS="\n\n"}
+{print NR,$1,$2,$3,$4}
+
+$ awk -f awkchecker checkbook
+1 1/1/04 #125 -695.00 Mortgage
+
+2 1/1/04 #126 -56.89 PG&E
+
+3 1/2/04 #127 -89.99 Safeway
+
+4 1/3/04 +750.00 Paycheck
+
+5 1/4/04 #128 -60.00 Visa
+```
+说明
+1.在BEGIN块中，记录分隔符(RS)被赋值为空，字段分隔符（FS）被设为换行符，输出记录分隔符(ORS)则被设置为两个换行符。于是，每一行都是一个字段，且输出记录之间有两个换行符将其分隔。
+2.打印记录号，后跟记录的每个字段。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
